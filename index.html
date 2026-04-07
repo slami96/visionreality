@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vision → Reality</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300;400;500&family=Syne:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#050505;overflow:hidden;color:#f0ece4;font-family:'Syne',sans-serif}
+
+  #scene{position:fixed;inset:0;z-index:1}
+
+  /* FLASH OVERLAY */
+  #flash{position:fixed;inset:0;z-index:3;background:#f0ece4;opacity:0;pointer-events:none}
+
+  /* TYPOGRAPHY */
+  .typo{position:fixed;inset:0;z-index:4;pointer-events:none;display:flex;align-items:center;justify-content:center;flex-direction:column}
+  #t-vision,#t-reality{
+    font-family:'Playfair Display',serif;
+    font-weight:300;
+    font-size:clamp(48px,12vw,140px);
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    opacity:0;
+    transform:scaleY(1.15);
+    line-height:1;
+  }
+  #t-vision{color:rgba(240,236,228,0.9)}
+  #t-reality{color:rgba(240,236,228,0.9)}
+  #t-line{width:0;height:1.5px;background:linear-gradient(90deg,transparent,#f0ece4,transparent);opacity:0;margin:10px 0}
+  #t-sub{
+    position:absolute;bottom:22%;
+    font-family:'Syne',sans-serif;
+    font-weight:300;font-size:clamp(10px,1.8vw,14px);
+    letter-spacing:.6em;text-transform:uppercase;
+    opacity:0;color:rgba(240,236,228,0.35)
+  }
+
+  /* SKIP */
+  #skip{
+    position:fixed;bottom:24px;right:24px;z-index:10;
+    background:none;border:1px solid rgba(240,236,228,0.15);
+    color:rgba(240,236,228,0.3);font-family:'Syne';font-size:10px;
+    font-weight:300;letter-spacing:.35em;text-transform:uppercase;
+    padding:7px 18px;cursor:pointer;transition:all .3s
+  }
+  #skip:hover{border-color:rgba(240,236,228,0.5);color:rgba(240,236,228,0.6)}
+
+  /* SLIDER */
+  #slider-wrap{
+    position:fixed;inset:0;z-index:6;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;background:#050505
+  }
+  #slider-wrap.on{pointer-events:all}
+  .s-title{
+    font-family:'Playfair Display',serif;font-weight:300;
+    font-size:clamp(12px,2.5vw,18px);letter-spacing:.45em;
+    text-transform:uppercase;color:rgba(240,236,228,0.4);
+    margin-bottom:16px;opacity:0
+  }
+  .cmp{
+    position:relative;width:min(92vw,480px);aspect-ratio:1179/2097;
+    overflow:hidden;cursor:col-resize;border-radius:3px;
+    box-shadow:0 40px 100px rgba(0,0,0,.7);opacity:0;transform:scale(.9)
+  }
+  .cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none;-webkit-user-drag:none}
+  .img-before{clip-path:inset(0 var(--cr) 0 0)}
+  .d-line{position:absolute;top:0;bottom:0;left:var(--p);width:1px;background:rgba(255,255,255,.7);pointer-events:none;z-index:2}
+  .d-handle{
+    position:absolute;top:50%;left:var(--p);transform:translate(-50%,-50%);
+    width:34px;height:34px;background:rgba(255,255,255,.92);border-radius:50%;
+    z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 10px rgba(0,0,0,.25)
+  }
+  .d-handle svg{width:14px;height:14px;fill:#222}
+  .s-labels{position:absolute;bottom:12px;left:0;right:0;z-index:4;display:flex;justify-content:space-between;padding:0 12px;pointer-events:none}
+  .s-labels span{
+    font-family:'Syne';font-weight:300;font-size:9px;letter-spacing:.3em;
+    text-transform:uppercase;background:rgba(0,0,0,.4);backdrop-filter:blur(6px);
+    color:rgba(255,255,255,.75);padding:4px 10px;border-radius:2px
+  }
+
+  /* GRAIN */
+  .grain{position:fixed;inset:0;z-index:200;pointer-events:none;opacity:.03;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:128px}
+</style>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+<div id="flash"></div>
+
+<div class="typo">
+  <div id="t-vision">Vision</div>
+  <div id="t-line"></div>
+  <div id="t-reality">Reality</div>
+  <div id="t-sub">architecture comparison</div>
+</div>
+
+<button id="skip">Skip</button>
+
+<div id="slider-wrap">
+  <div class="s-title" id="sTitle">Drag to compare</div>
+  <div class="cmp" id="cmp">
+    <img src="image2.jpg" alt="Reality" class="img-after">
+    <img src="image1.jpg" alt="Vision" class="img-before">
+    <div class="d-line"></div>
+    <div class="d-handle"><svg viewBox="0 0 24 24"><path d="M8.5 5l-5 7 5 7M15.5 5l5 7-5 7"/></svg></div>
+    <div class="s-labels"><span>Vision</span><span>Reality</span></div>
+  </div>
+</div>
+
+<div class="grain"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+// ============================================
+// SCENE SETUP
+// ============================================
+const W = window.innerWidth, H = window.innerHeight;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('scene'), antialias: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x050505);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 600);
+camera.position.set(40, 25, 40);
+camera.lookAt(0, 8, 0);
+
+// ============================================
+// BUILD COMPLEX ARCHITECTURAL MODEL
+// ============================================
+const buildingGroup = new THREE.Group();
+scene.add(buildingGroup);
+
+const matFaint = new THREE.LineBasicMaterial({ color: 0x2a2a30, transparent: true, opacity: 0 });
+const matMid = new THREE.LineBasicMaterial({ color: 0x4a4a52, transparent: true, opacity: 0 });
+const matBright = new THREE.LineBasicMaterial({ color: 0x7a7a82, transparent: true, opacity: 0 });
+const matAccent = new THREE.LineBasicMaterial({ color: 0xa08e70, transparent: true, opacity: 0 });
+const allMats = [matFaint, matMid, matBright, matAccent];
+
+function addEdges(geo, mat, pos, rot) {
+  const edges = new THREE.EdgesGeometry(geo);
+  const line = new THREE.LineSegments(edges, mat);
+  if (pos) line.position.set(pos.x||0, pos.y||0, pos.z||0);
+  if (rot) { line.rotation.x = rot.x||0; line.rotation.y = rot.y||0; line.rotation.z = rot.z||0; }
+  buildingGroup.add(line);
+  return line;
+}
+
+function addLine(pts, mat) {
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const l = new THREE.Line(g, mat);
+  buildingGroup.add(l);
+  return l;
+}
+
+// --- GROUND PLANE ---
+addEdges(new THREE.PlaneGeometry(60, 60, 12, 12), matFaint, {y: 0}, {x: -Math.PI/2});
+
+// --- MAIN VOLUME (L-shape base) ---
+// Left wing
+addEdges(new THREE.BoxGeometry(18, 8, 12, 2, 1, 1), matBright, {x: -5, y: 4, z: 0});
+// Right wing
+addEdges(new THREE.BoxGeometry(10, 8, 20, 1, 1, 2), matBright, {x: 10, y: 4, z: -4});
+
+// --- UPPER CANTILEVERED VOLUME ---
+addEdges(new THREE.BoxGeometry(24, 5, 14, 3, 1, 2), matMid, {x: 2, y: 12.5, z: -1});
+
+// --- TALL ATRIUM TOWER ---
+addEdges(new THREE.BoxGeometry(8, 22, 8, 1, 3, 1), matBright, {x: -8, y: 11, z: -4});
+
+// --- GLASS ATRIUM (cylinder) ---
+addEdges(new THREE.CylinderGeometry(4, 4, 16, 12, 3, true), matAccent, {x: 6, y: 8, z: 8});
+
+// --- ROOF PLANES ---
+// Angular roof slab
+addEdges(new THREE.BoxGeometry(26, 0.4, 16, 4, 0, 3), matMid, {x: 2, y: 15.2, z: -1}, {z: 0.05});
+// Overhang
+addEdges(new THREE.BoxGeometry(12, 0.3, 6, 2, 0, 1), matAccent, {x: -10, y: 22, z: -4});
+
+// --- INTERNAL FLOOR PLATES ---
+for (let y = 4; y <= 20; y += 4) {
+  if (y <= 8 || (y > 8 && y <= 22)) {
+    addEdges(new THREE.PlaneGeometry(7, 7, 2, 2), matFaint, {x: -8, y, z: -4}, {x: -Math.PI/2});
+  }
+}
+addEdges(new THREE.PlaneGeometry(22, 12, 3, 2), matFaint, {x: 2, y: 8, z: -1}, {x: -Math.PI/2});
+
+// --- COLUMNS ---
+function col(x, z, h) {
+  addEdges(new THREE.CylinderGeometry(0.2, 0.2, h, 4, 1), matBright, {x, y: h/2, z});
+}
+// Ground floor columns
+for (let x = -12; x <= 14; x += 5.2) { col(x, 6, 8); col(x, -6, 8); }
+// Tower columns
+col(-11, -7, 22); col(-11, -1, 22); col(-5, -7, 22); col(-5, -1, 22);
+
+// --- STAIRS (external) ---
+for (let i = 0; i < 8; i++) {
+  const y = i * 1;
+  const z = 14 - i * 0.8;
+  addLine([new THREE.Vector3(2, y, z), new THREE.Vector3(8, y, z)], matAccent);
+  addLine([new THREE.Vector3(2, y, z), new THREE.Vector3(2, y + 1, z - 0.8)], matAccent);
+  addLine([new THREE.Vector3(8, y, z), new THREE.Vector3(8, y + 1, z - 0.8)], matAccent);
+}
+
+// --- FACADE DETAILS (window grids) ---
+function windowGrid(x, yStart, yEnd, zStart, zEnd, divY, divZ, mat, axis) {
+  for (let i = 0; i <= divY; i++) {
+    const y = yStart + (yEnd - yStart) / divY * i;
+    if (axis === 'x') {
+      addLine([new THREE.Vector3(x, y, zStart), new THREE.Vector3(x, y, zEnd)], mat);
+    }
+  }
+  for (let j = 0; j <= divZ; j++) {
+    const z = zStart + (zEnd - zStart) / divZ * j;
+    if (axis === 'x') {
+      addLine([new THREE.Vector3(x, yStart, z), new THREE.Vector3(x, yEnd, z)], mat);
+    }
+  }
+}
+windowGrid(15, 0.5, 7.5, -13, 5, 4, 8, matFaint, 'x');
+windowGrid(-14, 0.5, 7.5, -6, 6, 4, 6, matFaint, 'x');
+windowGrid(-12, 8.5, 21.5, -7.5, -0.5, 6, 3, matFaint, 'x');
+
+// --- BRIDGE / WALKWAY ---
+addEdges(new THREE.BoxGeometry(12, 0.3, 3, 3, 0, 1), matAccent, {x: 2, y: 10, z: 8});
+// Railing
+addLine([new THREE.Vector3(-4,10.8,9.5), new THREE.Vector3(8,10.8,9.5)], matMid);
+addLine([new THREE.Vector3(-4,10.8,6.5), new THREE.Vector3(8,10.8,6.5)], matMid);
+for (let x = -4; x <= 8; x += 2) {
+  addLine([new THREE.Vector3(x,10,9.5), new THREE.Vector3(x,10.8,9.5)], matMid);
+  addLine([new THREE.Vector3(x,10,6.5), new THREE.Vector3(x,10.8,6.5)], matMid);
+}
+
+// --- LANDSCAPE ELEMENTS ---
+// Trees (simple wireframe cones)
+function tree(x, z, h) {
+  addEdges(new THREE.ConeGeometry(1.5, h, 5, 1), matAccent, {x, y: h/2 + 0.5, z});
+  addEdges(new THREE.CylinderGeometry(0.15, 0.2, 1, 4), matAccent, {x, y: 0.5, z});
+}
+tree(18, 12, 5); tree(22, 8, 4); tree(-18, 10, 6); tree(20, -10, 4.5); tree(-20, -8, 5.5);
+
+
+// ============================================
+// PARTICLE SYSTEM (scattered → building → explode)
+// ============================================
+const PCOUNT = 3000;
+const pGeo = new THREE.BufferGeometry();
+const pPositions = new Float32Array(PCOUNT * 3);    // current
+const pTargets = new Float32Array(PCOUNT * 3);      // building positions
+const pScattered = new Float32Array(PCOUNT * 3);    // initial random
+const pExploded = new Float32Array(PCOUNT * 3);     // explosion targets
+const pSizes = new Float32Array(PCOUNT);
+const pAlphas = new Float32Array(PCOUNT);
+
+// Sample points on building surfaces
+function sampleBuildingPoints() {
+  const boxes = [
+    {s:[18,8,12], p:[-5,4,0]},
+    {s:[10,8,20], p:[10,4,-4]},
+    {s:[24,5,14], p:[2,12.5,-1]},
+    {s:[8,22,8], p:[-8,11,-4]},
+    {s:[26,0.4,16], p:[2,15.2,-1]},
+    {s:[12,0.3,3], p:[2,10,8]},
+  ];
+  const points = [];
+  for (let i = 0; i < PCOUNT; i++) {
+    const box = boxes[Math.floor(Math.random() * boxes.length)];
+    const face = Math.floor(Math.random() * 6);
+    let x, y, z;
+    const sx = box.s[0], sy = box.s[1], sz = box.s[2];
+    switch(face) {
+      case 0: x = (Math.random()-0.5)*sx; y = (Math.random()-0.5)*sy; z = sz/2; break;
+      case 1: x = (Math.random()-0.5)*sx; y = (Math.random()-0.5)*sy; z = -sz/2; break;
+      case 2: x = sx/2; y = (Math.random()-0.5)*sy; z = (Math.random()-0.5)*sz; break;
+      case 3: x = -sx/2; y = (Math.random()-0.5)*sy; z = (Math.random()-0.5)*sz; break;
+      case 4: x = (Math.random()-0.5)*sx; y = sy/2; z = (Math.random()-0.5)*sz; break;
+      case 5: x = (Math.random()-0.5)*sx; y = -sy/2; z = (Math.random()-0.5)*sz; break;
+    }
+    points.push(x + box.p[0], y + box.p[1], z + box.p[2]);
+  }
+  return points;
+}
+
+const targets = sampleBuildingPoints();
+for (let i = 0; i < PCOUNT; i++) {
+  // Scattered: random sphere around building
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  const r = 50 + Math.random() * 80;
+  pScattered[i*3]   = Math.sin(phi) * Math.cos(theta) * r;
+  pScattered[i*3+1] = Math.sin(phi) * Math.sin(theta) * r * 0.6 + 10;
+  pScattered[i*3+2] = Math.cos(phi) * r;
+
+  // Target: on building surface
+  pTargets[i*3]   = targets[i*3];
+  pTargets[i*3+1] = targets[i*3+1];
+  pTargets[i*3+2] = targets[i*3+2];
+
+  // Exploded: outward from target
+  const dx = pTargets[i*3], dy = pTargets[i*3+1] - 10, dz = pTargets[i*3+2];
+  const len = Math.sqrt(dx*dx+dy*dy+dz*dz) || 1;
+  const force = 40 + Math.random() * 60;
+  pExploded[i*3]   = pTargets[i*3]   + (dx/len) * force + (Math.random()-0.5)*20;
+  pExploded[i*3+1] = pTargets[i*3+1] + (dy/len) * force * 0.7 + Math.random()*15;
+  pExploded[i*3+2] = pTargets[i*3+2] + (dz/len) * force + (Math.random()-0.5)*20;
+
+  // Start scattered
+  pPositions[i*3]   = pScattered[i*3];
+  pPositions[i*3+1] = pScattered[i*3+1];
+  pPositions[i*3+2] = pScattered[i*3+2];
+
+  pSizes[i] = 0.5 + Math.random() * 1.5;
+  pAlphas[i] = 0.3 + Math.random() * 0.7;
+}
+
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+pGeo.setAttribute('size', new THREE.BufferAttribute(pSizes, 1));
+pGeo.setAttribute('alpha', new THREE.BufferAttribute(pAlphas, 1));
+
+const pMat = new THREE.ShaderMaterial({
+  transparent: true,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  uniforms: {
+    uOpacity: { value: 1.0 },
+    uColor: { value: new THREE.Color(0xa08e70) }
+  },
+  vertexShader: `
+    attribute float size;
+    attribute float alpha;
+    varying float vAlpha;
+    void main() {
+      vAlpha = alpha;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = size * (200.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    uniform float uOpacity;
+    uniform vec3 uColor;
+    varying float vAlpha;
+    void main() {
+      float d = length(gl_PointCoord - 0.5) * 2.0;
+      float glow = exp(-d * d * 3.0);
+      gl_FragColor = vec4(uColor, glow * vAlpha * uOpacity);
+    }
+  `
+});
+
+const particles = new THREE.Points(pGeo, pMat);
+scene.add(particles);
+
+// ============================================
+// AMBIENT FLOATING DUST
+// ============================================
+const dustCount = 400;
+const dustGeo = new THREE.BufferGeometry();
+const dustPos = new Float32Array(dustCount * 3);
+for (let i = 0; i < dustCount; i++) {
+  dustPos[i*3]   = (Math.random()-0.5) * 100;
+  dustPos[i*3+1] = Math.random() * 30;
+  dustPos[i*3+2] = (Math.random()-0.5) * 100;
+}
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+const dustMat = new THREE.PointsMaterial({ color: 0x5a5a62, size: 0.15, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending });
+scene.add(new THREE.Points(dustGeo, dustMat));
+
+// ============================================
+// FOG
+// ============================================
+scene.fog = new THREE.FogExp2(0x050505, 0.008);
+
+// ============================================
+// ANIMATION STATE
+// ============================================
+const st = { phase: 0, orbitAngle: 0.6, orbitRadius: 55, camY: 28, lookY: 8, particleBlend: 0, wireOpacity: 0, explodeBlend: 0 };
+let done = false;
+let mx = 0, my = 0;
+window.addEventListener('mousemove', e => { mx = (e.clientX/W-0.5)*2; my = (e.clientY/H-0.5)*2; });
+
+// ============================================
+// GSAP MASTER TIMELINE (~5.5 sec)
+// ============================================
+const tl = gsap.timeline({ onComplete: revealSlider });
+
+// Phase 1 (0-2s): Particles converge to building, wireframe fades in
+tl.to(st, { particleBlend: 1, duration: 1.8, ease: 'power3.inOut' }, 0);
+tl.to(st, { wireOpacity: 1, duration: 1.2, ease: 'power2.in' }, 0.8);
+tl.to(st, { orbitAngle: 1.4, duration: 2, ease: 'power1.inOut' }, 0);
+tl.to(st, { orbitRadius: 45, duration: 2, ease: 'power2.out' }, 0);
+
+// Phase 2 (1.5-3s): "VISION" appears, camera continues orbiting
+tl.to('#t-vision', { opacity: 1, duration: 0.6, ease: 'power2.out' }, 1.4);
+tl.fromTo('#t-vision', { letterSpacing: '1em' }, { letterSpacing: '.3em', duration: 0.8, ease: 'power3.out' }, 1.4);
+tl.to('#t-vision', { opacity: 0, duration: 0.4, ease: 'power2.in' }, 2.6);
+
+// Camera keeps orbiting
+tl.to(st, { orbitAngle: 2.8, orbitRadius: 38, camY: 22, duration: 2.5, ease: 'power1.inOut' }, 2);
+
+// Phase 3 (3-3.5s): Line divider + "REALITY"
+tl.to('#t-line', { opacity: 0.5, width: '200px', duration: 0.3, ease: 'power2.out' }, 3);
+tl.to('#t-line', { opacity: 0, duration: 0.2 }, 3.5);
+tl.to('#t-reality', { opacity: 1, duration: 0.5, ease: 'power2.out' }, 3.2);
+tl.fromTo('#t-reality', { letterSpacing: '1em' }, { letterSpacing: '.3em', duration: 0.6, ease: 'power3.out' }, 3.2);
+
+// Phase 4 (3.5-4.2s): Subtitle flash
+tl.to('#t-sub', { opacity: 1, duration: 0.3 }, 3.4);
+
+// Phase 5 (4-5s): EXPLOSION - building shatters
+tl.to(st, { explodeBlend: 1, duration: 0.8, ease: 'power2.in' }, 4);
+tl.to(st, { wireOpacity: 0, duration: 0.5, ease: 'power3.in' }, 4);
+tl.to(pMat.uniforms.uOpacity, { value: 0, duration: 0.6, ease: 'power2.in' }, 4.3);
+
+// Text out
+tl.to('#t-reality', { opacity: 0, duration: 0.3 }, 4.2);
+tl.to('#t-sub', { opacity: 0, duration: 0.3 }, 4.2);
+
+// Phase 6 (4.5-5.2s): Flash + fade
+tl.to('#flash', { opacity: 0.7, duration: 0.15, ease: 'power4.in' }, 4.5);
+tl.to('#flash', { opacity: 0, duration: 0.5, ease: 'power2.out' }, 4.65);
+tl.to('#scene', { opacity: 0, duration: 0.5 }, 4.7);
+tl.to('#skip', { opacity: 0, pointerEvents: 'none', duration: 0.2 }, 4.5);
+
+function revealSlider() {
+  if (done) return;
+  done = true;
+  document.getElementById('slider-wrap').classList.add('on');
+  gsap.to('#slider-wrap', { opacity: 1, duration: 0.7, ease: 'power2.out' });
+  gsap.to('.cmp', { opacity: 1, scale: 1, duration: 0.9, ease: 'power3.out', delay: 0.15 });
+  gsap.to('#sTitle', { opacity: 1, duration: 0.6, delay: 0.4 });
+}
+
+document.getElementById('skip').addEventListener('click', () => tl.progress(1));
+
+// ============================================
+// RENDER LOOP
+// ============================================
+function lerp3(out, a, b, t) {
+  for (let i = 0; i < a.length; i++) out[i] = a[i] + (b[i] - a[i]) * t;
+}
+
+const _tempPositions = new Float32Array(PCOUNT * 3);
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  if (!done) {
+    // Interpolate particle positions
+    if (st.explodeBlend > 0.001) {
+      // Blend from target to exploded
+      lerp3(_tempPositions, pTargets, pExploded, st.explodeBlend);
+    } else {
+      // Blend from scattered to target
+      lerp3(_tempPositions, pScattered, pTargets, st.particleBlend);
+    }
+    for (let i = 0; i < PCOUNT * 3; i++) pPositions[i] = _tempPositions[i];
+    pGeo.attributes.position.needsUpdate = true;
+
+    // Wireframe opacity
+    allMats.forEach((m, idx) => {
+      const base = [0.35, 0.55, 0.75, 0.5][idx];
+      m.opacity = st.wireOpacity * base;
+    });
+
+    // Camera orbit
+    const angle = st.orbitAngle;
+    const targetX = Math.cos(angle) * st.orbitRadius + mx * 3;
+    const targetZ = Math.sin(angle) * st.orbitRadius;
+    const targetY = st.camY + my * -2;
+    camera.position.x += (targetX - camera.position.x) * 0.08;
+    camera.position.z += (targetZ - camera.position.z) * 0.08;
+    camera.position.y += (targetY - camera.position.y) * 0.08;
+    camera.lookAt(0, st.lookY, 0);
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ============================================
+// SLIDER
+// ============================================
+const cmp = document.getElementById('cmp');
+let pos = 50, dragging = false;
+function setPos(p) {
+  pos = Math.max(0, Math.min(100, p));
+  cmp.style.setProperty('--p', pos+'%');
+  cmp.style.setProperty('--cr', (100-pos)+'%');
+}
+setPos(50);
+function getPct(e) {
+  const r = cmp.getBoundingClientRect();
+  return ((e.touches ? e.touches[0].clientX : e.clientX) - r.left) / r.width * 100;
+}
+cmp.addEventListener('mousedown', e => { dragging=true; setPos(getPct(e)); });
+addEventListener('mousemove', e => { if(dragging) setPos(getPct(e)); });
+addEventListener('mouseup', () => dragging=false);
+cmp.addEventListener('touchstart', e => { dragging=true; setPos(getPct(e)); }, {passive:true});
+addEventListener('touchmove', e => { if(dragging) setPos(getPct(e)); }, {passive:true});
+addEventListener('touchend', () => dragging=false);
+addEventListener('keydown', e => {
+  if(e.key==='ArrowLeft') setPos(pos-2);
+  if(e.key==='ArrowRight') setPos(pos+2);
+});
+</script>
+</body>
+</html>
